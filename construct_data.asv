@@ -1,0 +1,366 @@
+function exp_data = construct_data2(db_name, db_data, param, db_label, db_data_name)
+
+
+% 与 construct_data 的区别：本函数的 WtrueTestTraining 矩阵是通过样本的真实分类得到的，而不是原始汉明距离
+
+
+% 1,000 data points are random selected from the whole data set 
+% as the queries, and the remaining is used to form the gallery database
+% and treated as the targets for search. A nominal threshold of the average 
+% distance to the 50th nearest neighbor is used to determine whether a 
+% database point returned for a given query is considered a true positive.
+
+% 这里暂时注释掉，以后可能要打开
+% addpath('./utils/');
+% addpath('..');
+
+choice = param.choice;
+% parameters
+averageNumberNeighbors = 50;    % ground truth is 50 nearest neighbor
+
+% construct data
+fprintf('starting construct %s database\n\n', db_name);
+
+
+% 为了加载文件，先跳到当前函数所在的目录（改函数返回之后别忘了再跳回去）
+p1 = mfilename('fullpath');
+i=findstr(p1,'\');
+p1=p1(1:i(end));
+cd(p1);
+addpath('./utils/');
+% p1
+
+if strcmp(db_name, 'gist_320d_CIFAR-10_yunchao')
+    num_test = 1000;                % for cifar10, 1000 query test point, rest are database
+    if param.sampleNum == 60000
+        num_test = 6000;
+    end
+elseif strcmp(db_name, 'cnn_1024d_CIFAR10')
+    num_test = 1000;  
+    if param.sampleNum == 60000
+        num_test = 6000;
+    end            
+elseif strcmp(db_name, 'gist_512d_Caltech-256')
+    num_test = 1000;
+    if param.sampleNum == 29780
+        num_test = 3000;
+    end 
+elseif strcmp(db_name, 'cnn_1024d_Caltech-256')
+    num_test = 1000;
+    if param.sampleNum == 29780
+        num_test = 3000;
+    end 
+elseif strcmp(db_name, 'cnn_4096d_Caltech-256')
+    num_test = 1000; 
+elseif strcmp(db_name, 'SUN397_gist_512d')
+    num_test = 1000;    
+    if param.sampleNum == 108754
+        num_test = 5000;
+    end
+elseif strcmp(db_name, 'mnist-784')
+    num_test = 1000;    
+    if param.sampleNum == 60000
+        num_test = 6000;
+    elseif param.sampleNum == 70000
+        num_test = 7000;
+    end
+elseif strcmp(db_name, 'LabelMe_gist-512')
+    num_test = 1000;
+elseif strcmp(db_name, 'MSRA-CFW-CFData-256')
+    num_test = 217;  
+elseif strcmp(db_name(1:8), 'NUS-WIDE')
+    num_test = 1000;
+    if param.sampleNum == 133441
+        num_test = 5000;
+    elseif param.sampleNum == 100111
+        num_test = 5000;
+    elseif param.sampleNum == 89529
+        num_test = 5000;
+    end 
+elseif strcmp(db_name, 'gist_512d_VOC')
+    num_test = 1000; 
+    if param.sampleNum == 17125
+        num_test = 2000;
+    end 
+    
+elseif strcmp(db_name, 'ImageNet_gist_512d')
+    if param.sampleNum == 64817
+        num_test = 5000;
+    elseif param.sampleNum == 129394 || param.sampleNum == 100000
+        num_test = 5000;
+    else
+        error('没有这个设置。');
+    end 
+    
+elseif strcmp(db_name, 'gist_512d_mirflickr25k')
+    num_test = 1000; 
+elseif strcmp(db_name(1:15), 'coco_gist_512d_')
+    num_test = 5000; 
+elseif strcmp(db_name(1:14), 'artificialData')
+    num_test = param.sampleNum / 4; 
+elseif strcmp(db_name(1:8), 'cifar10_')
+    num_test = 10000; 
+end
+
+
+% split up into training and test set
+[ndata, D] = size(db_data) % 目测当前是每行一个样本,每列一个特征
+
+% vec = db_data(10,:);
+% pic = reshape(vec,32,32)
+% imshow(pic);
+
+switch(choice)
+    case 'visualization'
+        s = RandStream('mt19937ar','Seed',0);
+        R = randperm(s, ndata);
+    case 'evaluation'
+        R = randperm(ndata);  % ndata为样本数，R为长度为ndata的一维向量，其值为 乱序 的1到ndata    
+end
+
+% 将随机选取的测试集固定下来
+if strcmp(param.onlyMethod, 'SemiNMFH')
+%     save('SemiNMFH/random_R.mat','R');
+    random_R = load('SemiNMFH/random_R.mat');
+elseif strcmp(param.onlyMethod, 'SemiNMFH_supervised') || strcmp(param.onlyMethod, 'SemiNMFH_supervised_RS') || strcmp(param.onlyMethod, 'SemiNMFH_supervised_noNMF')
+    
+    if strcmp(db_name, 'cnn_1024d_Caltech-256') || strcmp(db_name, 'gist_512d_Caltech-256')
+        random_R.R = randperm(5090, 5090);
+        if param.sampleNum == 29780
+            load('datasets\randomData\rand_29780_in_29780.mat');
+            random_R.R = randomData;
+            clear randomData;
+        end
+        
+    elseif strcmp(db_name, 'gist_320d_CIFAR-10_yunchao') || strcmp(db_name, 'cnn_1024d_CIFAR10')
+        if param.sampleNum == 60000
+%             save('SemiNMFH_supervised/random_R_gist_320d_CIFAR-10_yunchao-60000.mat','R');
+            random_R = load('SemiNMFH_supervised/random_R_gist_320d_CIFAR-10_yunchao-60000.mat');
+        else
+            % save('SemiNMFH_supervised/random_R_gist_320d_CIFAR-10_yunchao.mat','R');
+            random_R = load('SemiNMFH_supervised/random_R_gist_320d_CIFAR-10_yunchao.mat');
+        end
+        
+    elseif strcmp(db_name, 'SUN397_gist_512d')
+        if param.sampleNum == 108754
+            load('datasets\randomData\rand_108754_in_108754.mat');
+            random_R.R = randomData;
+            clear randomData;
+        else
+            error('暂未开通……');
+        end
+    
+    elseif strcmp(db_name, 'mnist-784')
+        if param.sampleNum == 60000
+%             save('SemiNMFH_supervised/random_R_mnist-784-60000samples.mat','R');
+            random_R = load('SemiNMFH_supervised/random_R_mnist-784-60000samples.mat');
+        elseif param.sampleNum == 70000
+%             save('SemiNMFH_supervised/random_R_mnist-784-70000samples.mat','R');
+            random_R = load('SemiNMFH_supervised/random_R_mnist-784-70000samples.mat');
+        else
+%           save('SemiNMFH_supervised/random_R_mnist-784.mat','R');
+            random_R = load('SemiNMFH_supervised/random_R_mnist-784.mat');
+        end
+        
+        
+    elseif strcmp(db_name, 'MSRA-CFW-CFData-256')
+%         save('SemiNMFH_supervised/random_R_MSRA-CFW-CFData-256.mat','R');
+        random_R = load('SemiNMFH_supervised/random_R_MSRA-CFW-CFData-256.mat');
+        
+    elseif strcmp(db_name, 'LabelMe_gist-512') % 这个数据集不需要也不应该随机
+        random_R.R = [1:ndata];
+        DistLM = db_label;
+        clear db_label;
+        
+    elseif strcmp(db_name(1:8), 'NUS-WIDE')
+        if param.sampleNum == 133441
+            load('datasets\randomData\rand_133441_in_133441.mat');
+            random_R.R = randomData;
+            clear randomData;
+        elseif param.sampleNum == 100111
+            load('datasets\randomData\rand_100111_in_100111.mat');
+            random_R.R = randomData;
+            clear randomData;
+        elseif param.sampleNum == 89529
+            load('datasets\randomData\rand_89529_in_89529.mat');
+            random_R.R = randomData;
+            clear randomData;
+        elseif param.sampleNum == 67994
+            load('datasets\randomData\rand_67994_in_67994.mat');
+            random_R.R = randomData;
+            clear randomData;
+        else
+            NUS_WIDE_index = load('datasets\NUS-WIDE\NUS_WID\rand_10000_in_10000');
+            random_R.R = NUS_WIDE_index.randData;
+        end
+       
+    elseif strcmp(db_name, 'gist_512d_VOC')
+        if param.sampleNum == 17125
+            load('datasets\randomData\rand_17125_in_17125.mat');
+            random_R.R = randomData;
+            clear randomData;
+        else
+            load('datasets\VOC\rand_6000_in_6000.mat');
+            random_R.R = rand_6000_in_6000;
+            clear rand_6000_in_6000;
+        end
+        
+    elseif strcmp(db_name, 'ImageNet_gist_512d')
+        if param.sampleNum == 64817
+            load('datasets\randomData\rand_64817_in_64817.mat');
+            random_R.R = randomData;
+            clear randomData;
+        elseif param.sampleNum == 129394
+            load('datasets\randomData\rand_129394_in_129394.mat');
+            random_R.R = randomData;
+            clear randomData;
+        elseif param.sampleNum == 100000
+            load('datasets\randomData\rand_100000_in_100000.mat');
+            random_R.R = randomData;
+            clear randomData;
+        else
+            error('没有这个设置。');
+        end
+        
+    elseif strcmp(db_name, 'gist_512d_mirflickr25k')
+        load('datasets\randomData\rand_11923_in_11923.mat');
+        random_R.R = randomData;
+        clear randomData;
+        
+    elseif strcmp(db_name(1:15), 'coco_gist_512d_')
+        load('datasets\randomData\rand_82080_in_82080.mat');
+        random_R.R = randomData;
+        clear randomData;
+        
+    elseif strcmp(db_name(1:14), 'artificialData')
+        random_R.R = randperm(param.sampleNum, param.sampleNum);
+        
+    elseif strcmp(db_name(1:8), 'cifar10_')
+        random_R.R = [50001:60000, 1:50000];
+        cifar10__R_size = size(random_R.R);
+    end
+    
+end
+
+R = random_R.R; 
+R_size = size(R)
+
+% 将随机选取的测试集固定下来
+% save('SemiNMFH_supervised/random_R.mat','R');
+% random_R = load('SemiNMFH_supervised/random_R.mat');
+% R = random_R.R;
+% ok = 1
+
+% num_test
+test_data = db_data(R(1:num_test), :); % 即：用随机的 num_test 个样本作测试集
+
+test_label = db_label(R(1:num_test), :); % num_test 个测试样本对应的标签
+
+test_ID = R(1:num_test);
+R(1: num_test) = [];
+train_data = db_data(R, :);
+train_label = db_label(R, :);
+
+train_ID = R;
+num_training = size(train_data, 1)
+
+
+% define ground-truth neighbors (this is only used for the evaluation):
+R = randperm(num_training); % R变成了训练样本集大小的乱序向量了
+
+DtrueTraining = distMat(train_data(R(1:100), :), train_data); % sample 100 points to find a threshold
+Dball = sort(DtrueTraining, 2);    % DtrueTraining sort by row （矩阵的每行独自排序）
+clear DtrueTraining;
+Dball = mean(Dball(:, averageNumberNeighbors));
+
+% scale data so that the target distance is 1
+train_data = train_data / Dball;
+test_data = test_data / Dball;
+Dball = 1;
+
+
+WtrueTestTraining = simMatByLabel(test_label,train_label);
+
+
+% 后来添加的，求S矩阵（即：WtrueTrainTraining，是个对称阵，对角线元素必全为1），表示训练集内部的相似程度
+% DtrueTrainTraining = distMat(train_data, train_data);
+% WtrueTrainTraining = DtrueTrainTraining < Dball;
+% clear DtrueTrainTraining;
+
+if strcmp(param.onlyMethod, 'SemiNMFH_supervised') || strcmp(param.onlyMethod, 'SemiNMFH_supervised_noNMF')
+    %后来添加的，求S矩阵（即：WtrueTrainTraining，是个对称阵，对角线元素必全为1），表示训练集内部的相似程度
+    if strcmp(param.evalMethod, 'hamming')
+        DtrueTrainTraining = distMat(train_data, train_data);
+        WtrueTrainTraining = DtrueTrainTraining < Dball;
+        clear DtrueTrainTraining;
+    elseif strcmp(param.evalMethod, 'label')
+        if strcmp(db_name, 'LabelMe_gist-512')
+            WtrueTrainTraining = DistLM(trainLabelIndex, trainLabelIndex);
+        elseif strcmp(db_name, 'gist_512d_VOC') || strcmp(db_name, 'gist_512d_mirflickr25k') || (length(db_name)>14 && strcmp(db_name(1:15), 'coco_gist_512d_'))
+            WtrueTrainTraining = train_label * train_label';
+            tempIndex = find(WtrueTrainTraining>0);
+            WtrueTrainTraining(tempIndex) = 1;
+        elseif strcmp(db_name(1:8), 'NUS-WIDE')
+            WtrueTrainTraining = train_label * train_label';
+            tempIndex = find(WtrueTrainTraining >= 2);
+            WtrueTrainTraining(tempIndex) = 1;
+        else
+            WtrueTrainTraining = simMatByLabel(train_label,train_label);
+        end
+    end
+    exp_data.WtrueTrainTraining = WtrueTrainTraining;
+end
+
+% generate training ans test split and the data matrix
+XX = [train_data; test_data];
+% XX 是 N*M 的。
+
+
+% num_training = size(train_data, 1);
+num_testing = size(test_data, 1);
+
+
+
+% % center the data, VERY IMPORTANT
+% sampleMean = mean(XX,1);
+% XX = (double(XX)-repmat(sampleMean,size(XX,1),1));
+
+
+% XX
+% normalize the data
+XX_normalized = normalize1(XX);
+
+
+exp_data.train_data = XX(1:num_training, :);
+exp_data.test_data = XX(num_training+1:end, :);
+exp_data.db_data = XX;
+
+if strcmp(db_name, 'LabelMe_gist-512')
+    exp_data.trainLabelIndex = trainLabelIndex;
+    exp_data.testLabelIndex = testLabelIndex;
+else
+    exp_data.train_label = train_label;
+    exp_data.test_label = test_label;
+    
+    if exist('param.isFindPic', 'var') && param.isFindPic == 1
+        exp_data.train_data_name = train_data_name;
+        exp_data.test_data_name = test_data_name;
+    end
+
+end
+
+
+
+exp_data.train_data_norml = XX_normalized(1:num_training, :);
+exp_data.test_data_norml = XX_normalized(num_training+1:end, :);
+exp_data.db_data_norml = XX_normalized;
+
+exp_data.train_ID = train_ID;
+exp_data.test_ID = test_ID;
+
+exp_data.WTT = WtrueTestTraining;
+
+
+
+
+fprintf('constructing %s database has finished\n\n', db_name);

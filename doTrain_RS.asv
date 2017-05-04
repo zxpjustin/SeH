@@ -1,0 +1,91 @@
+function [ param,P ] = doTrain_RS( D,param )
+% doTrain_RS 
+%  与 doTrain 唯一区别在于：用随机采样的方式处理监督数据
+
+D = D';
+
+[M,N] = size(D);
+
+params = init(D,param);
+
+outer_loop_num = params.outer_loop_num;
+
+result.iter=[];
+result.loss=[];
+result.time=[];
+
+U = params.Uinit;
+V = params.Vinit;
+
+% tic;
+for i = 1:outer_loop_num
+    
+    
+    
+    P = updateP(D,V,params);
+    
+    fr2P = norm(P, 'fro');
+    if isnan(fr2P)
+       disp('P ---- NaN');
+    end
+    
+    
+%     disp(['第',num2str(i),'次外层循环，P完成；目前所用时间：',num2str(toc)]);
+    U = updateU(D,U,V,P,params);
+    
+    fr2U = norm(U, 'fro');
+    if isnan(fr2U)
+       disp('U ---- NaN');
+    end
+
+%     disp(['第',num2str(i),'次外层循环，U完成；目前所用时间：',num2str(toc)]);
+    V = updateV_RS(D,U,V,P,params);
+    
+    fr2V = norm(V, 'fro');
+    if isnan(fr2V)
+       disp('V ---- NaN');
+    end
+
+
+    % 若出现 NaN ，则停止
+    if isnan(loss)
+       break;
+    end
+    
+end
+
+disp(['第',num2str(param.methodIndex),'个方法结束；目前所用时间：',num2str(toc)]);
+
+row = 3;
+col = 3;
+
+picIndex = mod(param.methodIndex, row * col);
+if(picIndex == 0)
+    picIndex = row * col;
+end
+
+if(picIndex == 1)
+    figure('NumberTitle', 'off', 'Name', ['随迭代次数的变化（下图横轴都是迭代次数），此时 K = ',num2str(params.K),'，序号后的两个数分别为参数 gamma 与 lamda']);
+end
+
+paraStr1 = [num2str(param.methodIndex),'、gamma=',num2str(param.gamma),'、lamda=',num2str(param.lamda),'、alpha=',num2str(param.alpha),'、'];
+paraStr2 = ['beta=',num2str(param.beta),'、epsilon=',num2str(param.epsilon),'、mu=',num2str(param.mu),'、delta=',num2str(param.delta)];
+subplot(row,col,picIndex)
+% result.iter
+% result.loss
+plot(result.iter, result.loss);
+title({paraStr1;paraStr2});
+
+V = p1(V); % 二值化
+V = (V>0);
+V = V';
+param.V = V;
+
+% param.B = compactbit(V);
+param.B = (V);
+
+
+
+
+end
+

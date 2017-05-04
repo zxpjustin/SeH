@@ -1,0 +1,71 @@
+
+clear all;
+
+addpath('./utils/');
+
+db_name = 'cnn_1024d_Caltech-256';
+param.sampleNum = 5090; % 选用的样本数量
+param.evalMethod = 'label';
+param.db_name = db_name;
+
+param.randomSample = 0;
+
+[db_data, db_label] = loadData(db_name, param.sampleNum, param.evalMethod);
+
+
+
+
+exp_data = construct_data(db_name, double(db_data), param, db_label);
+
+param.S = exp_data.WtrueTrainTraining;
+WtrueTestTraining = exp_data.WTT;
+
+
+train_data = exp_data.train_data;
+test_data = exp_data.test_data;
+
+db_data = exp_data.db_data;
+
+NMFparam = param;
+
+NMFparam.methodIndex = 2;
+
+NMFparam.method = 'SemiNMFH_supervised';
+
+NMFparam.mu=1;
+NMFparam.epsilon=1.0e-03;
+NMFparam.gamma=1.0e-02; 
+NMFparam.lamda=10.0e-01; 
+NMFparam.delta=5.0e-01; 
+NMFparam.alpha=0.03; 
+NMFparam.beta=2e-05;
+
+NMFparam.nbits=64;
+
+        
+[trnNum,~] = size(train_data);
+[tstNum,~] = size(test_data);
+
+[NMFparam,NMF_P] = doTrain(db_data(1:trnNum,:), NMFparam);
+B_trn = NMFparam.B;
+B_tst = doTest(db_data(trnNum+1:end,:),NMF_P,NMFparam);
+clear db_data train_data test_data train_label test_label NMFparam;
+
+
+% 压缩后再用原来的方法计算一遍（得到的结果用于计算原来版本的MAP）
+B_trn=compactbit(B_trn);
+B_tst=compactbit(B_tst);
+% compute Hamming metric and compute recall precision
+Dhamm = hammingDist(B_tst, B_trn);
+
+
+clear B_tst B_trn;
+
+   
+[recall, precision, max_hamm,~] = recall_precision(WtrueTestTraining, Dhamm);       
+        
+mAP = area_RP(recall, precision)
+
+
+
+
