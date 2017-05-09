@@ -15,7 +15,6 @@ params.inner_loop_num = 100;
 [M,N]=size(D);
 
 params.db_name = param.db_name;
-% params.method = param.method;
 params.sampleNum = param.sampleNum;
 
 params.alpha = param.alpha;
@@ -36,7 +35,6 @@ params.step = 0.001;
 % params.step = 0.0002;
 % params.step = -(5e-05) * K + 0.0074;  % 根据K变化的步长
 
-updateV_step = params.step
 
 
 % 不使用随机采样时用 S

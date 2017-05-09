@@ -10,22 +10,19 @@ param.db_name = db_name;
 param.randomSample = 0;  % Randomly sample if this parameter is 1, otherwise if 0.
 
 if param.randomSample == 1
-    param.randomSampleNum = 1000;
+    param.randomSampleNum = 1000; % The number of the random samples in each iteration for PSeH.
 end
 
-[db_data, db_label] = loadData(db_name, param.sampleNum);
+[db_data, db_label] = loadData(db_name, param.sampleNum); % Load datasets.
 
 
-exp_data = construct_data(db_name, double(db_data), param, db_label);
+exp_data = construct_data(db_name, double(db_data), param, db_label); % Preprocess datasets.
 
 if param.randomSample == 0
     param.S = exp_data.WtrueTrainTraining;
 end
 
-
-WtrueTestTraining = exp_data.WTT;
-
-
+WtrueTestTraining = exp_data.WTT; % This is used for the evaluation.
 train_data = exp_data.train_data;
 test_data = exp_data.test_data;
 train_label = exp_data.train_label;
