@@ -8,10 +8,10 @@ Learning with NMF (Non-negative Matrix Factorization) has significantly benefite
 
 To help others using our codes conveniently, we provide a implementation instance named <code>SeH_demo.m</code> which can be directly run. 
 In this instance, all default hyper-parameters are set in accordance with the paper 'Regularized Semi-Nonnegative Matrix Factorization for Hashing'. 
-The function 'doTrain.m' and 'doTest.m' are used in the training stage and testing stage respectively for SeH, while the 'doTrain_RS.m' is used for PSeH which uses random sampling strategy and applies to the large-scale datasets.
+The function <code>doTrain.m</code> and <code>doTest.m</code> are used in the training stage and testing stage respectively for SeH, while the <code>doTrain_RS.m</code> is used for PSeH which uses random sampling strategy and applies to the large-scale datasets.
 
 
-In addition, we provide a typical public dataset Caltech256 (cnn_1024d_Caltech-256.mat) which was represented as 1024-dimensional CNN features with single labels. 
+In addition, we provide a typical public dataset <code>Caltech256 (cnn_1024d_Caltech-256.mat)</code> which was represented as 1024-dimensional CNN features with single labels. 
 
 
 
