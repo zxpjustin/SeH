@@ -14,7 +14,9 @@ The function <code>doTrain.m</code> and <code>doTest.m</code> are used in the tr
 In addition, we provide a typical public dataset <code>Caltech256 (cnn_1024d_Caltech-256.mat)</code> which was represented as 1024-dimensional CNN features with single labels. 
 
 
+## Paper URL
 
+http://ieeexplore.ieee.org/document/8115178/
 
 
 
